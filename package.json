@@ -1,0 +1,20 @@
+{
+  "name": "prompting-technique-chatbot-cli",
+  "version": "1.0.0",
+  "description": "CLI chatbot using Claude API demonstrating zero-shot, few-shot, and chain-of-thought prompting techniques",
+  "main": "src/index.js",
+  "type": "module",
+  "scripts": {
+    "start": "node src/index.js",
+    "zero-shot": "node src/patterns/zero-shot.js",
+    "few-shot": "node src/patterns/few-shot.js",
+    "chain-of-thought": "node src/patterns/chain-of-thought.js"
+  },
+  "keywords": ["claude", "ai", "chatbot", "cli", "prompting"],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.39.0",
+    "dotenv": "^16.4.7"
+  }
+}
