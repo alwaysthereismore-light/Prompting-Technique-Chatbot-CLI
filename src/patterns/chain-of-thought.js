@@ -1,9 +1,8 @@
 /**
  * CHAIN-OF-THOUGHT (CoT) PATTERN
  * ─────────────────────────────────────────────────────────────────────────────
- * The model is instructed to reason step-by-step before producing its final
- * answer. Intermediate reasoning is shown inside <thinking> tags, followed
- * by a clear "Final Answer:" section.
+ * The model works through the problem, checks its result, and returns the
+ * concise answer plus key calculation steps in the structured JSON response.
  *
  * Why it works:
  *   Breaking a problem into explicit intermediate steps significantly improves
@@ -18,19 +17,9 @@
  * ─────────────────────────────────────────────────────────────────────────────
  */
 
-export const COT_SYSTEM = `You are a methodical reasoning assistant. 
-For EVERY question you receive, you MUST follow this exact structure:
-
-<thinking>
-Step 1: [Identify what is being asked]
-Step 2: [Break down the problem into smaller parts]
-Step 3: [Work through each part carefully]
-Step 4: [Verify your reasoning]
-</thinking>
-
-Final Answer: [Your concise, direct answer based on the reasoning above]
-
-Do not skip the thinking steps, even for simple questions. Show all your work.`;
+export const COT_SYSTEM = `You are a methodical reasoning assistant.
+Solve the problem carefully, check the calculation, and return the concise final
+answer in the answer field. Summarize the key steps and calculations in explanation.`;
 
 /**
  * Build the messages array for a chain-of-thought turn.
@@ -49,16 +38,13 @@ export function buildCoTMessages(history) {
     },
     {
       role: "assistant",
-      content: `<thinking>
-Step 1: Identify what is being asked — calculate the change from a $10 bill after buying 12 apples.
-Step 2: Break it down — (a) cost of 12 apples, (b) subtract from $10.
-Step 3: Work through it:
-  (a) 12 apples × $0.50 = $6.00
-  (b) $10.00 − $6.00 = $4.00
-Step 4: Verify — 12 × 0.5 = 6 ✓  10 − 6 = 4 ✓
-</thinking>
-
-Final Answer: You would receive $4.00 in change.`,
+      content: JSON.stringify({
+        answer: "You would receive $4.00 in change.",
+        explanation:
+          "12 × $0.50 = $6.00; $10.00 - $6.00 = $4.00.",
+        sentiment: null,
+        confidence: "High",
+      }),
     },
   ];
 
@@ -74,7 +60,7 @@ if (process.argv[1].endsWith("chain-of-thought.js")) {
 
   banner("Pattern Demo: Chain-of-thought", c.yellow);
   console.log(
-    `${c.dim}The model reasons step-by-step inside <thinking> tags.${c.reset}\n`
+    `${c.dim}The JSON response includes the answer and key calculation steps.${c.reset}\n`
   );
 
   const problems = [
@@ -92,7 +78,7 @@ if (process.argv[1].endsWith("chain-of-thought.js")) {
       messages,
       maxTokens: 1024,
     });
-    console.log(reply);
+    console.log(JSON.stringify(reply, null, 2));
     console.log();
   }
 }

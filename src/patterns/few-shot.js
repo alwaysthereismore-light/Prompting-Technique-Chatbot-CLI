@@ -14,10 +14,8 @@
 
 export const FEW_SHOT_SYSTEM = `You are a precise sentiment analysis assistant.
 Classify every piece of text as POSITIVE, NEGATIVE, or NEUTRAL.
-Always respond in exactly this format:
-  Sentiment: <POSITIVE|NEGATIVE|NEUTRAL>
-  Confidence: <High|Medium|Low>
-  Reason: <one concise sentence>`;
+Set the sentiment field to the correct label, give a concise reason in explanation,
+and provide your confidence.`;
 
 /**
  * Fixed few-shot examples that are prepended to every conversation turn.
@@ -30,8 +28,13 @@ const FEW_SHOT_EXAMPLES = [
   },
   {
     role: "assistant",
-    content:
-      "Sentiment: POSITIVE\nConfidence: High\nReason: The text uses strong positive language ('absolutely love', 'Best purchase ever').",
+    content: JSON.stringify({
+      answer: "POSITIVE",
+      explanation:
+        "The text uses strong positive language ('absolutely love', 'Best purchase ever').",
+      sentiment: "POSITIVE",
+      confidence: "High",
+    }),
   },
   {
     role: "user",
@@ -39,8 +42,13 @@ const FEW_SHOT_EXAMPLES = [
   },
   {
     role: "assistant",
-    content:
-      "Sentiment: NEGATIVE\nConfidence: High\nReason: The text describes two negative experiences (late delivery, damaged packaging).",
+    content: JSON.stringify({
+      answer: "NEGATIVE",
+      explanation:
+        "The text describes two negative experiences (late delivery, damaged packaging).",
+      sentiment: "NEGATIVE",
+      confidence: "High",
+    }),
   },
   {
     role: "user",
@@ -48,8 +56,13 @@ const FEW_SHOT_EXAMPLES = [
   },
   {
     role: "assistant",
-    content:
-      "Sentiment: NEUTRAL\nConfidence: High\nReason: The text states a plain fact with no emotional language.",
+    content: JSON.stringify({
+      answer: "NEUTRAL",
+      explanation:
+        "The text states a plain fact with no emotional language.",
+      sentiment: "NEUTRAL",
+      confidence: "High",
+    }),
   },
   {
     role: "user",
@@ -58,8 +71,13 @@ const FEW_SHOT_EXAMPLES = [
   },
   {
     role: "assistant",
-    content:
-      "Sentiment: NEUTRAL\nConfidence: Medium\nReason: Mixed but mild language suggests neither strong satisfaction nor dissatisfaction.",
+    content: JSON.stringify({
+      answer: "NEUTRAL",
+      explanation:
+        "Mixed but mild language suggests neither strong satisfaction nor dissatisfaction.",
+      sentiment: "NEUTRAL",
+      confidence: "Medium",
+    }),
   },
 ];
 
@@ -103,6 +121,6 @@ if (process.argv[1].endsWith("few-shot.js")) {
       messages,
       maxTokens: 256,
     });
-    console.log(reply);
+    console.log(JSON.stringify(reply, null, 2));
   }
 }

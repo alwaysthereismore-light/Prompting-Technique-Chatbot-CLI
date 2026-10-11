@@ -1,26 +1,80 @@
-import Anthropic from "@anthropic-ai/sdk";
 import dotenv from "dotenv";
+import { fileURLToPath } from "node:url";
+import {
+  CHAT_OUTPUT_INSTRUCTIONS,
+  ChatResponseSchema,
+} from "./response-schema.js";
 
-dotenv.config();
+dotenv.config({
+  path: [".env", fileURLToPath(new URL("./.env", import.meta.url))],
+});
 
-if (!process.env.ANTHROPIC_API_KEY) {
+const API_KEY = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY;
+
+if (!API_KEY) {
   console.error(
-    "❌  Missing ANTHROPIC_API_KEY. Copy .env.example → .env and add your key."
+    "❌  Missing GEMINI_API_KEY. Add your Google AI Studio key to .env or src/.env."
   );
   process.exit(1);
 }
 
-export const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+export const MODEL = process.env.GEMINI_MODEL || "gemini-2.5-flash";
 
-export const MODEL = "claude-3-5-haiku-20241022";
+/** Send a request to Gemini and return its Zod-validated structured response. */
+export async function chat({
+  system,
+  messages,
+  maxTokens = 1024,
+  schema = ChatResponseSchema,
+  outputInstructions = CHAT_OUTPUT_INSTRUCTIONS,
+}) {
+  const response = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(
+      MODEL
+    )}:generateContent`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-goog-api-key": API_KEY,
+      },
+      body: JSON.stringify({
+        systemInstruction: {
+          parts: [{ text: `${system}\n\n${outputInstructions}` }],
+        },
+        contents: messages.map((message) => ({
+          role: message.role === "assistant" ? "model" : message.role,
+          parts: [{ text: message.content }],
+        })),
+        generationConfig: {
+          maxOutputTokens: maxTokens,
+          responseMimeType: "application/json",
+        },
+      }),
+    }
+  );
 
-/** Send a single request and return the text response. */
-export async function chat({ system, messages, maxTokens = 1024 }) {
-  const response = await client.messages.create({
-    model: MODEL,
-    max_tokens: maxTokens,
-    system,
-    messages,
-  });
-  return response.content[0].text;
+  if (!response.ok) {
+    const error = new Error(`Gemini request failed with HTTP ${response.status}.`);
+    error.status = response.status;
+    throw error;
+  }
+
+  const payload = await response.json();
+  const text = payload.candidates
+    ?.flatMap((candidate) => candidate.content?.parts ?? [])
+    .map((part) => part.text ?? "")
+    .join("");
+
+  if (!text) {
+    throw new Error("Gemini returned no text content to validate.");
+  }
+
+  let parsed;
+  try {
+    parsed = JSON.parse(text);
+  } catch (error) {
+    throw new Error("Gemini returned invalid JSON.", { cause: error });
+  }
+  return schema.parse(parsed);
 }

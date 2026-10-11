@@ -1,7 +1,7 @@
 /**
  * Prompting Technique Chatbot CLI
  * ─────────────────────────────────
- * Interactive chatbot powered by Claude.
+ * Interactive chatbot powered by Google Gemini.
  * Lets the user pick a prompting pattern at startup:
  *   1. Zero-shot
  *   2. Few-shot
@@ -85,7 +85,7 @@ async function main() {
     conversationHistory.push({ role: "user", content: userInput });
 
     try {
-      console.log(`\n${pattern.colour}${c.bold}Claude › ${c.reset}`);
+      console.log(`\n${pattern.colour}${c.bold}Gemini › ${c.reset}`);
       const messages = pattern.build(conversationHistory);
       const reply = await chat({
         system: pattern.system,
@@ -93,9 +93,12 @@ async function main() {
         maxTokens: 1024,
       });
 
-      console.log(reply);
+      console.log(JSON.stringify(reply, null, 2));
       console.log();
-      conversationHistory.push({ role: "assistant", content: reply });
+      conversationHistory.push({
+        role: "assistant",
+        content: JSON.stringify(reply),
+      });
     } catch (err) {
       console.error(`\n${c.dim}Error: ${err.message}${c.reset}\n`);
     }

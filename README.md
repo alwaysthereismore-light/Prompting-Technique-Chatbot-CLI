@@ -1,6 +1,9 @@
 # 🤖 Prompting Technique Chatbot CLI
 
-A command-line chatbot powered by the **Claude API** that demonstrates three core prompting techniques: **Zero-shot**, **Few-shot**, and **Chain-of-thought**. Built as part of the [IntelliForge 12-Week AI Engineering Cohort](https://upskill.intelliforge.tech).
+[![CI](https://github.com/alwaysthereismore-light/Prompting-Technique-Chatbot-CLI/actions/workflows/ci.yml/badge.svg)](https://github.com/alwaysthereismore-light/Prompting-Technique-Chatbot-CLI/actions/workflows/ci.yml)
+[![MIT License](https://img.shields.io/badge/License-MIT-green.svg)](./LICENSE)
+
+A command-line chatbot powered by the **Google Gemini API** that demonstrates three core prompting techniques: **Zero-shot**, **Few-shot**, and **Chain-of-thought**. Built as part of the [IntelliForge 12-Week AI Engineering Cohort](https://upskill.intelliforge.tech).
 
 ---
 
@@ -15,6 +18,7 @@ A command-line chatbot powered by the **Claude API** that demonstrates three cor
   - [2. Few-shot](#2-few-shot)
   - [3. Chain-of-thought](#3-chain-of-thought)
 - [Pattern Comparison](#pattern-comparison)
+- [Learning Outcomes & Evaluation Evidence](#learning-outcomes--evaluation-evidence)
 - [Sample Outputs](#sample-outputs)
 
 ---
@@ -23,12 +27,13 @@ A command-line chatbot powered by the **Claude API** that demonstrates three cor
 
 | Feature | Detail |
 |---|---|
-| **Model** | `claude-3-5-haiku-20241022` |
+| **Model** | `gemini-2.5-flash` |
 | **Runtime** | Node.js 18+ (ESM) |
-| **API** | Anthropic Claude API |
+| **API** | Google Gemini API |
 | **Interface** | Interactive CLI with colour output |
+| **Output** | Zod-validated JSON |
 
-The chatbot loads with a **custom system prompt** per pattern, shaping Claude's persona and output format before any user message is sent. All three patterns share the same underlying API client — only the system prompt and message construction differ.
+The chatbot loads with a **custom system prompt** per pattern, shaping Gemini's persona and output format before any user message is sent. All three patterns share the same underlying API client — only the system prompt and message construction differ. API credentials are loaded from local environment files and must never be committed.
 
 ---
 
@@ -38,14 +43,26 @@ The chatbot loads with a **custom system prompt** per pattern, shaping Claude's 
 prompting-technique-chatbot-cli/
 ├── src/
 │   ├── index.js                    # Interactive CLI entry point
-│   ├── client.js                   # Anthropic SDK wrapper + chat() helper
+│   ├── client.js                   # Gemini API wrapper + validated chat() helper
+│   ├── response-schema.js          # Zod schemas and JSON output instructions
+│   ├── eval/
+│   │   ├── cases.js                # Ten W01 evaluation cases
+│   │   ├── report.js               # Markdown report renderer
+│   │   └── run.js                  # Chatbot + LLM-as-judge harness
 │   ├── ui.js                       # ANSI colours, banner, readline helpers
 │   └── patterns/
 │       ├── zero-shot.js            # Zero-shot pattern + standalone demo
 │       ├── few-shot.js             # Few-shot pattern + standalone demo
 │       └── chain-of-thought.js     # Chain-of-thought pattern + standalone demo
-├── .env.example                    # API key template
+├── .env.example                    # Safe Gemini configuration template
+├── .github/workflows/ci.yml        # Key-free test workflow for Node 18/20/22
 ├── .gitignore
+├── LICENSE                         # MIT
+├── reports/
+│   └── eval-report.md              # Latest recorded LLM-as-judge run
+├── test/
+│   ├── gemini-client.test.js       # Gemini API adapter tests
+│   └── response-schema.test.js     # Schema, case-count, and report tests
 ├── package.json
 └── README.md
 ```
@@ -57,7 +74,7 @@ prompting-technique-chatbot-cli/
 ### 1. Clone the repo
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/Prompting-Technique-Chatbot-CLI.git
+git clone https://github.com/alwaysthereismore-light/Prompting-Technique-Chatbot-CLI.git
 cd Prompting-Technique-Chatbot-CLI
 ```
 
@@ -67,19 +84,27 @@ cd Prompting-Technique-Chatbot-CLI
 npm install
 ```
 
-### 3. Add your Anthropic API key
+### 3. Add your Google Gemini API key
+
+Copy `.env.example` to `.env` in the repository root, then add your key:
+
+```powershell
+Copy-Item .env.example .env
+```
+
+Or on macOS/Linux:
 
 ```bash
 cp .env.example .env
 ```
 
-Open `.env` and replace the placeholder:
+The `.env` file is ignored by Git. Add the key locally:
 
 ```
-ANTHROPIC_API_KEY=sk-ant-your-key-here
+GEMINI_API_KEY=your-google-ai-studio-key
 ```
 
-Get a key at [console.anthropic.com](https://console.anthropic.com).
+Create a key in [Google AI Studio](https://aistudio.google.com/app/apikey). The client also accepts `GOOGLE_API_KEY`; set `GEMINI_MODEL` to override the default model. Keep API keys private, and never paste them into source code, issues, or chat.
 
 ---
 
@@ -107,6 +132,54 @@ You › Enter 1, 2, or 3:
 ```
 
 Type `exit` or `quit` at any time to end the session.
+
+### Structured response format
+
+Every generated chatbot reply is requested as JSON and validated with Zod before
+it is displayed or added to the conversation history. The schema rejects
+missing or unexpected fields and invalid enum values. The response has this shape:
+
+```json
+{
+  "answer": "The direct answer",
+  "explanation": "A concise explanation or key calculation steps",
+  "sentiment": null,
+  "confidence": "High"
+}
+```
+
+For sentiment classification, `sentiment` is `POSITIVE`, `NEGATIVE`, or
+`NEUTRAL`. Otherwise it is `null`. The confidence value is `High`, `Medium`, or
+`Low`. Invalid JSON or a schema mismatch is surfaced as an error rather than
+displayed as a successful response.
+
+### Run the LLM-as-judge evaluation
+
+```bash
+npm run eval
+```
+
+The harness runs ten cases across the zero-shot, few-shot, and chain-of-thought
+patterns. Each chatbot response and each judge result is validated with Zod.
+The judge scores each response from 1 to 5 against case-specific criteria; a
+score of 4 or higher passes. The run writes a pass/fail table and failure-mode
+commentary to `reports/eval-report.md`. A failed case causes the command to
+exit with a non-zero status. Each case normally makes two model requests; the
+harness stops early on non-retryable API errors and marks unattempted cases as
+not run. A valid `GEMINI_API_KEY` (or `GOOGLE_API_KEY`) is required.
+
+The current checked-in [evaluation report](./reports/eval-report.md) is
+transparent evidence of an attempted run, **not a successful quality result**:
+the recorded attempt received HTTP 404 on its first Gemini request, so no judge
+scores were produced and the remaining cases were not run. Re-run the harness
+with a working key and model configuration to generate scored evidence. The
+report is overwritten on each run.
+
+Run the local schema and report tests with:
+
+```bash
+npm test
+```
 
 ### Standalone pattern demos
 
@@ -144,7 +217,7 @@ Be helpful, friendly, and to the point. If you do not know something, say so hon
 System prompt (task description only)
         │
         ▼
-User message ──► Claude ──► Response
+User message ──► Gemini ──► Response
 ```
 
 The `buildZeroShotMessages()` function simply passes the raw conversation history — no injection of examples:
@@ -158,7 +231,7 @@ export function buildZeroShotMessages(history) {
 #### When to use it
 
 - General Q&A, summarisation, translation
-- When the task is straightforward and well within Claude's training
+- When the task is straightforward and well within the model's knowledge
 - When token efficiency matters (cheapest pattern)
 
 ---
@@ -176,10 +249,8 @@ Few-shot prompting **injects labelled input→output examples** into the message
 ```
 You are a precise sentiment analysis assistant.
 Classify every piece of text as POSITIVE, NEGATIVE, or NEUTRAL.
-Always respond in exactly this format:
-  Sentiment: <POSITIVE|NEGATIVE|NEUTRAL>
-  Confidence: <High|Medium|Low>
-  Reason: <one concise sentence>
+Set the sentiment field to the correct label, give a concise reason in
+explanation, and provide your confidence.
 ```
 
 #### How it works
@@ -189,16 +260,16 @@ System prompt
         │
         ▼
 Example 1: user  →  "I absolutely love this product!"
-Example 1: asst  →  Sentiment: POSITIVE / Confidence: High / Reason: ...
+Example 1: asst  →  JSON with answer=POSITIVE / sentiment=POSITIVE
 Example 2: user  →  "The delivery was late and packaging was damaged."
-Example 2: asst  →  Sentiment: NEGATIVE / Confidence: High / Reason: ...
+Example 2: asst  →  JSON with answer=NEGATIVE / sentiment=NEGATIVE
 Example 3: user  →  "The package arrived on Tuesday."
-Example 3: asst  →  Sentiment: NEUTRAL / Confidence: High / Reason: ...
+Example 3: asst  →  JSON with answer=NEUTRAL / sentiment=NEUTRAL
 Example 4: user  →  "The product is okay, I guess."
-Example 4: asst  →  Sentiment: NEUTRAL / Confidence: Medium / Reason: ...
+Example 4: asst  →  JSON with answer=NEUTRAL / sentiment=NEUTRAL
         │
         ▼
-Real user message ──► Claude ──► Response in exact format
+Real user message ──► Gemini ──► Zod-validated JSON response
 ```
 
 The `buildFewShotMessages()` function prepends fixed examples to every turn:
@@ -223,36 +294,28 @@ export function buildFewShotMessages(history) {
 
 #### What it is
 
-Chain-of-thought (CoT) prompting instructs the model to **reason step-by-step** before giving its final answer. Intermediate reasoning is wrapped in `<thinking>` tags, followed by a `Final Answer:` section. This dramatically improves accuracy on multi-step problems.
+Chain-of-thought (CoT) prompting encourages the model to **work through a
+problem step-by-step**, verify its calculations, and put the concise answer and
+key steps in the structured response fields.
 
 #### System prompt used
 
 ```
 You are a methodical reasoning assistant.
-For EVERY question you receive, you MUST follow this exact structure:
-
-<thinking>
-Step 1: [Identify what is being asked]
-Step 2: [Break down the problem into smaller parts]
-Step 3: [Work through each part carefully]
-Step 4: [Verify your reasoning]
-</thinking>
-
-Final Answer: [Your concise, direct answer based on the reasoning above]
-
-Do not skip the thinking steps, even for simple questions. Show all your work.
+Solve the problem carefully, check the calculation, and return the concise final
+answer in the answer field. Summarize the key steps and calculations in explanation.
 ```
 
 #### How it works
 
 ```
-System prompt (reasoning format mandate)
+System prompt (reasoning task and JSON format)
         │
         ▼
-1-shot CoT example (anchors the format)
+1-shot JSON example (anchors the calculation and format)
         │
         ▼
-Real user message ──► Claude reasons step-by-step ──► Final Answer
+Real user message ──► Gemini works through the calculation ──► JSON answer
 ```
 
 A single demonstration example is injected to reinforce the format:
@@ -261,7 +324,7 @@ A single demonstration example is injected to reinforce the format:
 export function buildCoTMessages(history) {
   const cotExample = [
     { role: "user", content: "A store sells apples for $0.50 each..." },
-    { role: "assistant", content: "<thinking>\nStep 1: ...\n</thinking>\n\nFinal Answer: ..." }
+    { role: "assistant", content: "{\"answer\":\"$4.00 in change\",\"explanation\":\"12 × $0.50 = $6.00; $10.00 - $6.00 = $4.00.\",\"sentiment\":null,\"confidence\":\"High\"}" }
   ];
   return [...cotExample, ...history];
 }
@@ -283,9 +346,32 @@ export function buildCoTMessages(history) {
 | **Examples injected** | None | 4 labelled examples | 1 reasoning example |
 | **Best for** | General Q&A | Classification / formatting | Reasoning / maths |
 | **Token cost** | Lowest | Medium | Highest |
-| **Output format** | Free-form | Strictly structured | Structured (thinking + answer) |
-| **Accuracy on logic** | Baseline | Baseline | Significantly higher |
+| **Output format** | Structured JSON | Structured JSON | Structured JSON with key steps |
+| **Intended use** | General answers | Classification | Multi-step problem solving |
 | **Key mechanism** | Pretrained knowledge | Learning by analogy | Explicit intermediate steps |
+
+## Learning Outcomes & Evaluation Evidence
+
+This project demonstrates the following hands-on learning:
+
+- **Prompting patterns:** implemented zero-shot, few-shot, and step-by-step
+  problem-solving prompts and compared when each is useful.
+- **Structured generation:** designed a strict response contract and validate
+  generated JSON at runtime with Zod instead of trusting prompt compliance.
+- **Evaluation design:** authored ten cases with explicit criteria and added an
+  LLM-as-judge rubric, score threshold, failure categories, and Markdown output.
+- **Reliability and testing:** tests validate schema rejection, judge score
+  bounds, case count, report output, and the Gemini adapter without requiring a
+  live API key. GitHub Actions runs these tests on Node.js 18, 20, and 22.
+- **Honest measurement:** model quality is not claimed from synthetic examples
+  or from API errors. Only a completed run with judge scores should be treated
+  as evaluation evidence; judge scores are qualitative and can themselves be
+  wrong.
+
+To reproduce the key-free checks, run `npm ci` and `npm test`. To produce
+model-based evidence, configure a valid Gemini key and run `npm run eval`, then
+commit the resulting report together with the code/configuration used for that
+run. Do not commit API credentials.
 
 ---
 
@@ -300,10 +386,12 @@ What is machine learning in one sentence?
 
 **Response:**
 ```
-Machine learning is a branch of artificial intelligence where systems learn
-from data to identify patterns and make decisions with minimal human
-intervention, improving their performance over time without being explicitly
-programmed for each task.
+{
+  "answer": "Machine learning is a branch of artificial intelligence where systems learn patterns from data to make predictions or decisions.",
+  "explanation": "The system improves from examples rather than relying only on explicitly programmed rules.",
+  "sentiment": null,
+  "confidence": "High"
+}
 ```
 
 ---
@@ -315,13 +403,12 @@ Name three benefits of open-source software.
 
 **Response:**
 ```
-1. Transparency — the source code is publicly auditable, making it easier
-   to identify security vulnerabilities and verify behaviour.
-2. Cost — most open-source software is free to use, reducing licensing costs
-   for individuals and organisations.
-3. Community-driven improvement — a global community of contributors can
-   report bugs, add features, and maintain the project faster than a single
-   vendor typically can.
+{
+  "answer": "Three benefits are transparency, lower licensing costs, and community-driven improvement.",
+  "explanation": "Open code can be audited, free licenses can reduce costs, and a broad contributor base can improve the software.",
+  "sentiment": null,
+  "confidence": "High"
+}
 ```
 
 ---
@@ -335,10 +422,12 @@ I waited three weeks and the item still hasn't arrived. Terrible experience!
 
 **Response:**
 ```
-Sentiment: NEGATIVE
-Confidence: High
-Reason: The text expresses frustration over a delayed delivery and explicitly
-        describes the experience as "terrible".
+{
+  "answer": "NEGATIVE",
+  "explanation": "The text expresses frustration over a delayed delivery and explicitly describes the experience as 'terrible'.",
+  "sentiment": "NEGATIVE",
+  "confidence": "High"
+}
 ```
 
 ---
@@ -350,10 +439,12 @@ The coffee was warm and the chair was comfortable.
 
 **Response:**
 ```
-Sentiment: NEUTRAL
-Confidence: Medium
-Reason: The text describes mildly positive physical conditions but uses
-        plain, unenthusiastic language with no strong emotion.
+{
+  "answer": "NEUTRAL",
+  "explanation": "The text describes mildly positive conditions in a plain, unenthusiastic way.",
+  "sentiment": "NEUTRAL",
+  "confidence": "Medium"
+}
 ```
 
 ---
@@ -365,10 +456,12 @@ Five stars! Exceeded every expectation I had.
 
 **Response:**
 ```
-Sentiment: POSITIVE
-Confidence: High
-Reason: A five-star rating combined with "exceeded every expectation"
-        signals strong, unambiguous satisfaction.
+{
+  "answer": "POSITIVE",
+  "explanation": "A five-star rating and 'exceeded every expectation' signal strong satisfaction.",
+  "sentiment": "POSITIVE",
+  "confidence": "High"
+}
 ```
 
 ---
@@ -383,18 +476,12 @@ what is the total distance covered?
 
 **Response:**
 ```
-<thinking>
-Step 1: Identify what is being asked — calculate the total distance of a
-        two-leg train journey.
-Step 2: Break it down into two separate distance calculations, then sum them.
-Step 3: Work through each part:
-  Leg 1: 60 mph × 2.5 hours = 150 miles
-  Leg 2: 80 mph × 1.5 hours = 120 miles
-  Total: 150 + 120 = 270 miles
-Step 4: Verify — 60 × 2.5 = 150 ✓  80 × 1.5 = 120 ✓  150 + 120 = 270 ✓
-</thinking>
-
-Final Answer: The train covers a total distance of 270 miles.
+{
+  "answer": "The train covers a total distance of 270 miles.",
+  "explanation": "The first leg is 60 × 2.5 = 150 miles; the second is 80 × 1.5 = 120 miles. Together, 150 + 120 = 270 miles.",
+  "sentiment": null,
+  "confidence": "High"
+}
 ```
 
 ---
@@ -407,18 +494,12 @@ and they want to tip 20% on the pre-tax amount. How much does each person pay?
 
 **Response:**
 ```
-<thinking>
-Step 1: Find the total bill including tax and tip, then divide by 3.
-Step 2: Three calculations needed — tax amount, tip amount, total, then split.
-Step 3:
-  Tax:   $72.00 × 0.08 = $5.76
-  Tip:   $72.00 × 0.20 = $14.40
-  Total: $72.00 + $5.76 + $14.40 = $92.16
-  Split: $92.16 ÷ 3 = $30.72
-Step 4: Verify — 30.72 × 3 = 92.16 ✓  72 + 5.76 + 14.40 = 92.16 ✓
-</thinking>
-
-Final Answer: Each person pays $30.72.
+{
+  "answer": "Each person pays $30.72.",
+  "explanation": "Tax is $5.76 and the pre-tax tip is $14.40, so the total is $92.16. Dividing by 3 gives $30.72.",
+  "sentiment": null,
+  "confidence": "High"
+}
 ```
 
 ---

@@ -1,20 +1,39 @@
 {
   "name": "prompting-technique-chatbot-cli",
   "version": "1.0.0",
-  "description": "CLI chatbot using Claude API demonstrating zero-shot, few-shot, and chain-of-thought prompting techniques",
+  "description": "CLI chatbot using Google Gemini API demonstrating zero-shot, few-shot, and chain-of-thought prompting techniques",
   "main": "src/index.js",
   "type": "module",
   "scripts": {
     "start": "node src/index.js",
     "zero-shot": "node src/patterns/zero-shot.js",
     "few-shot": "node src/patterns/few-shot.js",
-    "chain-of-thought": "node src/patterns/chain-of-thought.js"
+    "chain-of-thought": "node src/patterns/chain-of-thought.js",
+    "eval": "node src/eval/run.js",
+    "test": "node --test"
   },
-  "keywords": ["claude", "ai", "chatbot", "cli", "prompting"],
-  "author": "",
+  "keywords": [
+    "gemini",
+    "ai",
+    "chatbot",
+    "cli",
+    "prompting"
+  ],
+  "author": "alwaysthereismore-light",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/alwaysthereismore-light/Prompting-Technique-Chatbot-CLI.git"
+  },
+  "homepage": "https://github.com/alwaysthereismore-light/Prompting-Technique-Chatbot-CLI#readme",
+  "bugs": {
+    "url": "https://github.com/alwaysthereismore-light/Prompting-Technique-Chatbot-CLI/issues"
+  },
+  "engines": {
+    "node": ">=18"
+  },
   "dependencies": {
-    "@anthropic-ai/sdk": "^0.39.0",
-    "dotenv": "^16.4.7"
+    "dotenv": "^16.4.7",
+    "zod": "^4.6.5"
   }
 }

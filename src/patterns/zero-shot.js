@@ -47,6 +47,6 @@ if (process.argv[1].endsWith("zero-shot.js")) {
       system: ZERO_SHOT_SYSTEM,
       messages: buildZeroShotMessages([{ role: "user", content: q }]),
     });
-    console.log(`A: ${reply}\n`);
+    console.log(`A: ${JSON.stringify(reply, null, 2)}\n`);
   }
 }
