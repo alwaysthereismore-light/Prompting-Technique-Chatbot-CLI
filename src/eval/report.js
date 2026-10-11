@@ -4,7 +4,13 @@ function escapeTableCell(value) {
 
 export function renderReport(
   results,
-  { chatbotModel, judgeModel, threshold = 4, date } = {}
+  {
+    chatbotModel,
+    judgeModel,
+    metaPrompting = true,
+    threshold = 4,
+    date,
+  } = {}
 ) {
   const passed = results.filter(
     (result) => result.score !== null && result.score >= threshold
@@ -48,12 +54,26 @@ export function renderReport(
         })
         .join("\n")
     : "No failure modes were observed in this run.";
+  const plans = results.filter((result) => result.plan);
+  const planCommentary = plans.length
+    ? plans
+        .map(
+          (result) =>
+            `- **${escapeTableCell(result.id)}:** ${escapeTableCell(
+              result.plan.task
+            )} Instructions: ${result.plan.instructions
+              .map(escapeTableCell)
+              .join("; ")}`
+        )
+        .join("\n")
+    : "No meta-prompt plans were generated in this run.";
 
   return `# W01 Chatbot Evaluation Report
 
 - **Run date:** ${date ?? new Date().toISOString()}
 - **Chatbot model:** ${chatbotModel ?? "Not recorded"}
 - **LLM-as-judge model:** ${judgeModel ?? "Not recorded"}
+- **Meta-prompting:** ${metaPrompting ? "Enabled" : "Not applied"}
 - **Judge strategy:** Use a separately configured, highest-capability Gemini model for evaluation.
 - **Cases:** ${results.length}
 - **Pass threshold:** ${threshold}/5
@@ -64,6 +84,10 @@ export function renderReport(
 | Case | Pattern | Judge score | Result | Judge commentary |
 |---|---|---:|---|---|
 ${rows}
+
+## Generated meta-prompt plans
+
+${planCommentary}
 
 ## Failure mode commentary
 

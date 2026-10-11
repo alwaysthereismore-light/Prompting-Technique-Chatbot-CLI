@@ -3,6 +3,7 @@
 - **Run date:** 2026-10-11T09:08:08.416Z
 - **Chatbot model:** gemini-2.5-flash
 - **LLM-as-judge model:** Not recorded (judge was not reached)
+- **Meta-prompting:** Not applied
 - **Judge strategy:** Use a separately configured, highest-capability Gemini model for evaluation.
 - **Cases:** 10
 - **Pass threshold:** 4/5
@@ -38,4 +39,4 @@
 
 ## Interpretation
 
-The chosen evaluation policy is to use a separate, highest-capability Gemini model as judge; the exact judge model is configured with `GEMINI_JUDGE_MODEL` and recorded on completed future runs. This historical run failed before a judge request, so it contains no LLM-as-judge scores. A case passes at 4/5 or higher. A generation, JSON parsing, or schema-validation error is recorded as a failure rather than omitted. Cases not attempted after a non-retryable API error are marked NOT RUN and are not assigned a score. Treat judge scores as a qualitative signal; review borderline results and failure explanations before drawing conclusions.
+This historical run predates the plan-then-answer meta-prompting implementation and failed before a judge request, so it contains no LLM-as-judge scores or generated plans. The chosen evaluation policy is to use a separate, highest-capability Gemini model as judge; the exact judge model is configured with `GEMINI_JUDGE_MODEL` and recorded on completed future runs. A case passes at 4/5 or higher. A generation, JSON parsing, or schema-validation error is recorded as a failure rather than omitted. Cases not attempted after a non-retryable API error are marked NOT RUN and are not assigned a score. Treat judge scores as a qualitative signal; review borderline results and failure explanations before drawing conclusions.

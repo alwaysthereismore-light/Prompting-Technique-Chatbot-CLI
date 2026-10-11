@@ -44,6 +44,7 @@ prompting-technique-chatbot-cli/
 ├── src/
 │   ├── index.js                    # Interactive CLI entry point
 │   ├── client.js                   # Gemini API wrapper + validated chat() helper
+│   ├── meta-prompt.js              # Plan-then-answer meta-prompting flow
 │   ├── response-schema.js          # Zod schemas and JSON output instructions
 │   ├── eval/
 │   │   ├── cases.js                # Ten W01 evaluation cases
@@ -62,6 +63,7 @@ prompting-technique-chatbot-cli/
 │   └── eval-report.md              # Latest recorded LLM-as-judge run
 ├── test/
 │   ├── gemini-client.test.js       # Gemini API adapter tests
+│   ├── meta-prompt.test.js         # Plan-then-answer flow tests
 │   └── response-schema.test.js     # Schema, case-count, and report tests
 ├── package.json
 └── README.md
@@ -133,6 +135,26 @@ You › Enter 1, 2, or 3:
 
 Type `exit` or `quit` at any time to end the session.
 
+### Meta-prompting flow
+
+Each chatbot turn now uses a two-stage meta-prompting flow:
+
+1. A planner receives the selected pattern's base instructions and up to the
+   latest eight real conversation messages. Few-shot/CoT demonstration examples
+   are excluded from planner context.
+2. The planner returns a concise JSON plan validated by `MetaPromptPlanSchema`.
+   The plan identifies the task, up to six answer instructions, up to six
+   constraints, and a response format.
+3. The validated plan is added as guidance to the latest user request. The
+   selected prompting pattern then generates the final answer, which is
+   independently validated by `ChatResponseSchema`.
+
+Planner output is treated as task guidance, not as a replacement for the
+selected system role or safety requirements. The CLI displays the plan and
+answer separately so the technique is observable. This adds one model request
+per chatbot turn; evaluations make three requests per case (planner, answer,
+and judge), so latency and API cost increase.
+
 ### Structured response format
 
 Every generated chatbot reply is requested as JSON and validated with Zod before
@@ -162,9 +184,10 @@ npm run eval
 The harness runs ten cases across the zero-shot, few-shot, and chain-of-thought
 patterns. Each chatbot response and each judge result is validated with Zod.
 The judge scores each response from 1 to 5 against case-specific criteria; a
-score of 4 or higher passes. The run writes a pass/fail table and failure-mode
-commentary to `reports/eval-report.md`. A failed case causes the command to
-exit with a non-zero status. Each case normally makes two model requests; the
+score of 4 or higher passes. The run writes a pass/fail table, generated
+meta-prompt plans, and failure-mode commentary to `reports/eval-report.md`. A
+failed case causes the command to exit with a non-zero status. Each case
+normally makes three model requests (planner, chatbot, and judge); the
 harness stops early on non-retryable API errors and marks unattempted cases as
 not run. A valid `GEMINI_API_KEY` (or `GOOGLE_API_KEY`) and an explicit
 `GEMINI_JUDGE_MODEL` are required.
@@ -258,7 +281,7 @@ export function buildZeroShotMessages(history) {
 
 - General Q&A, summarisation, translation
 - When the task is straightforward and well within the model's knowledge
-- When token efficiency matters (cheapest pattern)
+- When avoiding pattern-specific examples matters
 
 ---
 
@@ -382,6 +405,8 @@ This project demonstrates the following hands-on learning:
 
 - **Prompting patterns:** implemented zero-shot, few-shot, and step-by-step
   problem-solving prompts and compared when each is useful.
+- **Meta-prompting:** added a validated plan-then-answer flow that adapts task
+  instructions to the latest conversation turn while preserving each pattern.
 - **Structured generation:** designed a strict response contract and validate
   generated JSON at runtime with Zod instead of trusting prompt compliance.
 - **Evaluation design:** authored ten cases with explicit criteria and added an

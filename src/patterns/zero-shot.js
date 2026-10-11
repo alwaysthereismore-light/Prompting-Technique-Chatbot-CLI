@@ -7,7 +7,7 @@
  * When to use:
  *   • General Q&A, summarisation, translation, casual conversation
  *   • When examples would not meaningfully improve the output
- *   • Fastest and most token-efficient pattern
+ *   • No pattern demonstrations; keeps task-specific context lightweight
  * ─────────────────────────────────────────────────────────────────────────────
  */
 
@@ -30,7 +30,7 @@ export function buildZeroShotMessages(history) {
 // Run with:  npm run zero-shot
 // ─────────────────────────────────────────────────────────────────────────────
 if (process.argv[1].endsWith("zero-shot.js")) {
-  const { chat } = await import("../client.js");
+  const { chatWithMetaPrompt } = await import("../meta-prompt.js");
   const { banner, label, c } = await import("../ui.js");
 
   banner("Pattern Demo: Zero-shot", c.cyan);
@@ -43,10 +43,11 @@ if (process.argv[1].endsWith("zero-shot.js")) {
 
   for (const q of questions) {
     label(`\nQ: ${q}`, c.cyan);
-    const reply = await chat({
+    const { plan, response } = await chatWithMetaPrompt({
       system: ZERO_SHOT_SYSTEM,
       messages: buildZeroShotMessages([{ role: "user", content: q }]),
     });
-    console.log(`A: ${JSON.stringify(reply, null, 2)}\n`);
+    console.log(`Meta-prompt plan: ${JSON.stringify(plan, null, 2)}`);
+    console.log(`A: ${JSON.stringify(response, null, 2)}\n`);
   }
 }

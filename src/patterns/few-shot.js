@@ -96,7 +96,7 @@ export function buildFewShotMessages(history) {
 // Run with:  npm run few-shot
 // ─────────────────────────────────────────────────────────────────────────────
 if (process.argv[1].endsWith("few-shot.js")) {
-  const { chat } = await import("../client.js");
+  const { chatWithMetaPrompt } = await import("../meta-prompt.js");
   const { banner, label, c } = await import("../ui.js");
 
   banner("Pattern Demo: Few-shot", c.magenta);
@@ -116,11 +116,13 @@ if (process.argv[1].endsWith("few-shot.js")) {
     const messages = buildFewShotMessages([
       { role: "user", content: `Classify: "${text}"` },
     ]);
-    const reply = await chat({
+    const { plan, response } = await chatWithMetaPrompt({
       system: FEW_SHOT_SYSTEM,
       messages,
+      contextMessages: [{ role: "user", content: `Classify: "${text}"` }],
       maxTokens: 256,
     });
-    console.log(JSON.stringify(reply, null, 2));
+    console.log(`Meta-prompt plan: ${JSON.stringify(plan, null, 2)}`);
+    console.log(JSON.stringify(response, null, 2));
   }
 }

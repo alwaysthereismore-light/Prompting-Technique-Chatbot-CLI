@@ -5,17 +5,21 @@ import {
   JUDGE_OUTPUT_INSTRUCTIONS,
   JudgeResponseSchema,
 } from "../response-schema.js";
+import { chatWithMetaPrompt } from "../meta-prompt.js";
 import { EVAL_CASES } from "./cases.js";
 import { renderReport } from "./report.js";
 
 const REPORT_PATH = path.resolve(process.cwd(), "reports", "eval-report.md");
 
 async function scoreCase(chat, testCase) {
+  let plan;
   try {
-    const generated = await chat({
+    const generated = await chatWithMetaPrompt({
       system: testCase.system,
       messages: testCase.build([{ role: "user", content: testCase.input }]),
+      contextMessages: [{ role: "user", content: testCase.input }],
     });
+    plan = generated.plan;
 
     const judged = await chat({
       system:
@@ -29,7 +33,7 @@ async function scoreCase(chat, testCase) {
             {
               task: testCase.input,
               successCriteria: testCase.criteria,
-              chatbotResponse: generated,
+              chatbotResponse: generated.response,
             },
             null,
             2
@@ -45,6 +49,7 @@ async function scoreCase(chat, testCase) {
     return {
       id: testCase.id,
       pattern: testCase.pattern,
+      plan: generated.plan,
       score: judged.score,
       rationale: judged.rationale,
       failureMode: judged.failureMode,
@@ -57,6 +62,7 @@ async function scoreCase(chat, testCase) {
     return {
       id: testCase.id,
       pattern: testCase.pattern,
+      plan,
       score: null,
       error: status
         ? `Gemini request failed with HTTP ${status}; verify API configuration and retry.`
@@ -105,6 +111,7 @@ export async function runEvaluation({ reportPath = REPORT_PATH } = {}) {
   const report = renderReport(results, {
     chatbotModel: MODEL,
     judgeModel: JUDGE_MODEL,
+    metaPrompting: true,
   });
   await mkdir(path.dirname(reportPath), { recursive: true });
   await writeFile(reportPath, report, "utf8");

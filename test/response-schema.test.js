@@ -68,6 +68,31 @@ test("judge response schema constrains scores to integers from 1 through 5", () 
   }
 });
 
+test("meta-prompt plan schema rejects invalid, oversized, and extra data", async () => {
+  const { MetaPromptPlanSchema } = await import("../src/response-schema.js");
+  const validPlan = {
+    task: "Answer the math question.",
+    instructions: ["Calculate the result and verify it."],
+    constraints: [],
+    responseFormat: "Give a concise answer with key steps.",
+  };
+  assert.equal(MetaPromptPlanSchema.safeParse(validPlan).success, true);
+  assert.equal(
+    MetaPromptPlanSchema.safeParse({
+      ...validPlan,
+      instructions: [],
+    }).success,
+    false
+  );
+  assert.equal(
+    MetaPromptPlanSchema.safeParse({
+      ...validPlan,
+      unexpected: true,
+    }).success,
+    false
+  );
+});
+
 test("evaluation set contains exactly ten cases across all three patterns", () => {
   assert.equal(EVAL_CASES.length, 10);
   assert.deepEqual(
@@ -84,6 +109,10 @@ test("report renders every case and failure mode commentary", () => {
       score: 5,
       rationale: "Accurate.",
       failureMode: null,
+      plan: {
+        task: "Answer the question.",
+        instructions: ["Be accurate."],
+      },
     },
     {
       id: "fs-01",
@@ -96,10 +125,14 @@ test("report renders every case and failure mode commentary", () => {
   const report = renderReport(results, {
     chatbotModel: "test-chatbot",
     judgeModel: "test-sota-judge",
+    metaPrompting: true,
     date: "test-date",
   });
   assert.match(report, /Chatbot model:\*\* test-chatbot/);
   assert.match(report, /LLM-as-judge model:\*\* test-sota-judge/);
+  assert.match(report, /Meta-prompting:\*\* Enabled/);
+  assert.match(report, /Generated meta-prompt plans/);
+  assert.match(report, /Answer the question/);
   assert.match(report, /1 passed, 1 failed, 0 not run/);
   assert.match(report, /Classification error \(fs-01\)/);
   assert.match(report, /\| zs-01 \| Zero-shot \| 5\/5 \| \*\*PASS\*\* \|/);

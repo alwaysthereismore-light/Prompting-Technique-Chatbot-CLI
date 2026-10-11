@@ -55,7 +55,7 @@ export function buildCoTMessages(history) {
 // Run with:  npm run chain-of-thought
 // ─────────────────────────────────────────────────────────────────────────────
 if (process.argv[1].endsWith("chain-of-thought.js")) {
-  const { chat } = await import("../client.js");
+  const { chatWithMetaPrompt } = await import("../meta-prompt.js");
   const { banner, label, c } = await import("../ui.js");
 
   banner("Pattern Demo: Chain-of-thought", c.yellow);
@@ -73,12 +73,14 @@ if (process.argv[1].endsWith("chain-of-thought.js")) {
     label(`\nProblem: ${problem}`, c.yellow);
     console.log("─".repeat(60));
     const messages = buildCoTMessages([{ role: "user", content: problem }]);
-    const reply = await chat({
+    const { plan, response } = await chatWithMetaPrompt({
       system: COT_SYSTEM,
       messages,
+      contextMessages: [{ role: "user", content: problem }],
       maxTokens: 1024,
     });
-    console.log(JSON.stringify(reply, null, 2));
+    console.log(`Meta-prompt plan: ${JSON.stringify(plan, null, 2)}`);
+    console.log(JSON.stringify(response, null, 2));
     console.log();
   }
 }

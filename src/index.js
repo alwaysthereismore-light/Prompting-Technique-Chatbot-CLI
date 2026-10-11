@@ -8,7 +8,8 @@
  *   3. Chain-of-thought
  */
 
-import { chat, MODEL } from "./client.js";
+import { MODEL } from "./client.js";
+import { chatWithMetaPrompt } from "./meta-prompt.js";
 import { banner, label, c, createPrompt } from "./ui.js";
 import {
   ZERO_SHOT_SYSTEM,
@@ -29,21 +30,21 @@ const PATTERNS = {
     colour: c.cyan,
     system: ZERO_SHOT_SYSTEM,
     build: buildZeroShotMessages,
-    hint: "Ask anything — no examples provided.",
+    hint: "A short meta-prompt plan is generated before each answer.",
   },
   "2": {
     name: "Few-shot",
     colour: c.magenta,
     system: FEW_SHOT_SYSTEM,
     build: buildFewShotMessages,
-    hint: "The model has seen labelled examples before answering.",
+    hint: "A short meta-prompt plan uses the labelled examples before answering.",
   },
   "3": {
     name: "Chain-of-thought",
     colour: c.yellow,
     system: COT_SYSTEM,
     build: buildCoTMessages,
-    hint: "The model thinks step-by-step before giving its final answer.",
+    hint: "A short meta-prompt plan guides the reasoning before the answer.",
   },
 };
 
@@ -87,17 +88,21 @@ async function main() {
     try {
       console.log(`\n${pattern.colour}${c.bold}Gemini › ${c.reset}`);
       const messages = pattern.build(conversationHistory);
-      const reply = await chat({
+      const { plan, response } = await chatWithMetaPrompt({
         system: pattern.system,
         messages,
+        contextMessages: conversationHistory,
         maxTokens: 1024,
       });
 
-      console.log(JSON.stringify(reply, null, 2));
+      console.log(`${c.dim}Meta-prompt plan:${c.reset}`);
+      console.log(JSON.stringify(plan, null, 2));
+      console.log(`${pattern.colour}${c.bold}Gemini response:${c.reset}`);
+      console.log(JSON.stringify(response, null, 2));
       console.log();
       conversationHistory.push({
         role: "assistant",
-        content: JSON.stringify(reply),
+        content: JSON.stringify(response),
       });
     } catch (err) {
       console.error(`\n${c.dim}Error: ${err.message}${c.reset}\n`);
