@@ -36,6 +36,7 @@ async function scoreCase(chat, testCase) {
           ),
         },
       ],
+      model: testCase.judgeModel,
       maxTokens: 256,
       schema: JudgeResponseSchema,
       outputInstructions: JUDGE_OUTPUT_INSTRUCTIONS,
@@ -70,12 +71,17 @@ async function scoreCase(chat, testCase) {
 }
 
 export async function runEvaluation({ reportPath = REPORT_PATH } = {}) {
-  const { chat, MODEL } = await import("../client.js");
+  const { chat, MODEL, JUDGE_MODEL } = await import("../client.js");
+  if (!JUDGE_MODEL) {
+    throw new Error(
+      "Missing GEMINI_JUDGE_MODEL. Set it to the highest-capability Gemini model you intend to use as the LLM judge."
+    );
+  }
   const results = [];
 
   for (const testCase of EVAL_CASES) {
     console.log(`Evaluating ${testCase.id} (${testCase.pattern})...`);
-    const result = await scoreCase(chat, testCase);
+    const result = await scoreCase(chat, { ...testCase, judgeModel: JUDGE_MODEL });
     results.push(result);
     console.log(
       result.score === null
@@ -96,7 +102,10 @@ export async function runEvaluation({ reportPath = REPORT_PATH } = {}) {
     }
   }
 
-  const report = renderReport(results, { model: MODEL });
+  const report = renderReport(results, {
+    chatbotModel: MODEL,
+    judgeModel: JUDGE_MODEL,
+  });
   await mkdir(path.dirname(reportPath), { recursive: true });
   await writeFile(reportPath, report, "utf8");
   console.log(`\nReport written to ${reportPath}`);

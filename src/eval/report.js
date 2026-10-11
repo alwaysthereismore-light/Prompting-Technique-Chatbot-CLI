@@ -2,7 +2,10 @@ function escapeTableCell(value) {
   return String(value).replaceAll("|", "\\|").replaceAll(/\s+/g, " ").trim();
 }
 
-export function renderReport(results, { model, threshold = 4, date } = {}) {
+export function renderReport(
+  results,
+  { chatbotModel, judgeModel, threshold = 4, date } = {}
+) {
   const passed = results.filter(
     (result) => result.score !== null && result.score >= threshold
   ).length;
@@ -49,7 +52,9 @@ export function renderReport(results, { model, threshold = 4, date } = {}) {
   return `# W01 Chatbot Evaluation Report
 
 - **Run date:** ${date ?? new Date().toISOString()}
-- **Model:** ${model ?? "Not recorded"}
+- **Chatbot model:** ${chatbotModel ?? "Not recorded"}
+- **LLM-as-judge model:** ${judgeModel ?? "Not recorded"}
+- **Judge strategy:** Use a separately configured, highest-capability Gemini model for evaluation.
 - **Cases:** ${results.length}
 - **Pass threshold:** ${threshold}/5
 - **Result:** ${passed} passed, ${failed} failed, ${notRun} not run

@@ -93,7 +93,13 @@ test("report renders every case and failure mode commentary", () => {
       failureMode: "Classification error",
     },
   ];
-  const report = renderReport(results, { model: "test-model", date: "test-date" });
+  const report = renderReport(results, {
+    chatbotModel: "test-chatbot",
+    judgeModel: "test-sota-judge",
+    date: "test-date",
+  });
+  assert.match(report, /Chatbot model:\*\* test-chatbot/);
+  assert.match(report, /LLM-as-judge model:\*\* test-sota-judge/);
   assert.match(report, /1 passed, 1 failed, 0 not run/);
   assert.match(report, /Classification error \(fs-01\)/);
   assert.match(report, /\| zs-01 \| Zero-shot \| 5\/5 \| \*\*PASS\*\* \|/);

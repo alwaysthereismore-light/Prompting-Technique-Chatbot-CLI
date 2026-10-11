@@ -166,14 +166,40 @@ score of 4 or higher passes. The run writes a pass/fail table and failure-mode
 commentary to `reports/eval-report.md`. A failed case causes the command to
 exit with a non-zero status. Each case normally makes two model requests; the
 harness stops early on non-retryable API errors and marks unattempted cases as
-not run. A valid `GEMINI_API_KEY` (or `GOOGLE_API_KEY`) is required.
+not run. A valid `GEMINI_API_KEY` (or `GOOGLE_API_KEY`) and an explicit
+`GEMINI_JUDGE_MODEL` are required.
+
+### Evaluation model decision: use a SOTA judge
+
+**Decision:** use a separate, highest-capability Gemini model available to the
+project as the LLM judge, rather than letting the chatbot score itself or
+silently reusing the chatbot's generation model. The judge checks the response
+against each case's criteria and emits a schema-validated score, rationale, and
+failure mode. A stronger judge is selected to improve the quality of
+correctness and instruction-following assessments; it can increase evaluation
+latency and API cost, so each run records the exact chatbot and judge model IDs
+in the report.
+
+Set `GEMINI_JUDGE_MODEL` in `.env` to the highest-capability generally available
+Gemini model enabled for your project. Model availability and names change;
+choose the current model in [Google's Gemini model documentation](https://ai.google.dev/gemini-api/docs/models)
+instead of assuming a hard-coded model ID will remain SOTA. `GEMINI_MODEL`
+continues to select the chatbot model independently. `npm run eval` requires
+the judge setting explicitly so an evaluation cannot silently fall back to the
+chatbot model.
+
+This is a model-selection decision, not proof that the judge is unbiased or
+objectively superior. LLM-as-judge scores remain qualitative and may contain
+errors; retain the case criteria and review rationales, especially for
+borderline scores.
 
 The current checked-in [evaluation report](./reports/eval-report.md) is
 transparent evidence of an attempted run, **not a successful quality result**:
 the recorded attempt received HTTP 404 on its first Gemini request, so no judge
-scores were produced and the remaining cases were not run. Re-run the harness
-with a working key and model configuration to generate scored evidence. The
-report is overwritten on each run.
+scores were produced and the remaining cases were not run. The SOTA-judge
+selection above documents the evaluation policy; that historical run did not
+reach a judge call. Re-run the harness with a working key and both model
+settings to generate scored evidence. The report is overwritten on each run.
 
 Run the local schema and report tests with:
 

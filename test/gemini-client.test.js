@@ -36,6 +36,7 @@ test("Gemini client requests JSON and validates its response", async () => {
   try {
     const result = await chat({
       system: "Answer directly.",
+      model: "gemini-test-judge",
       messages: [{ role: "assistant", content: "Earlier response" },
         { role: "user", content: "What is 2 + 2?" }],
     });
@@ -43,7 +44,7 @@ test("Gemini client requests JSON and validates its response", async () => {
     assert.equal(ChatResponseSchema.safeParse(result).success, true);
     assert.equal(
       request.url,
-      "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent"
+      "https://generativelanguage.googleapis.com/v1beta/models/gemini-test-judge:generateContent"
     );
     assert.equal(request.options.headers["x-goog-api-key"], "test-only-key");
     const body = JSON.parse(request.options.body);

@@ -19,18 +19,20 @@ if (!API_KEY) {
 }
 
 export const MODEL = process.env.GEMINI_MODEL || "gemini-2.5-flash";
+export const JUDGE_MODEL = process.env.GEMINI_JUDGE_MODEL;
 
 /** Send a request to Gemini and return its Zod-validated structured response. */
 export async function chat({
   system,
   messages,
+  model = MODEL,
   maxTokens = 1024,
   schema = ChatResponseSchema,
   outputInstructions = CHAT_OUTPUT_INSTRUCTIONS,
 }) {
   const response = await fetch(
     `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(
-      MODEL
+      model
     )}:generateContent`,
     {
       method: "POST",
